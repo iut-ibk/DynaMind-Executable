@@ -197,7 +197,7 @@ int main(int argc, char *argv[], char *envp[]) {
 	bool verbose = false;
 	string cpfile = "";
     string replace = "";
-	int numThreads = 1;
+	int numThreads = -1;
 
 	DM::LogLevel ll = DM::Standard;
 
@@ -298,7 +298,8 @@ int main(int argc, char *argv[], char *envp[]) {
 	}
 
 #ifdef _OPENMP
-	omp_set_num_threads(numThreads);
+	if(numThreads > 0)
+		omp_set_num_threads(numThreads);
 #endif
 
 
