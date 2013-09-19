@@ -38,6 +38,7 @@
 #include <QCoreApplication>
 #include <QSettings>
 #include <QStringList>
+#include <QUuid>
 
 #include <dmlogger.h>
 #include <dmlog.h>
@@ -82,7 +83,8 @@ void copyfiles(string &cpfile, int iteration)
 string replacestrings(string &replace, string projectfilepath)
 {
     QStringList replacelist = QString::fromStdString(replace).split(";");
-    QString tmpfile = QString::fromStdString(projectfilepath)+"_tmp.dyn";
+	//Create unique name, necessary when srating multiple simulations form the same root simulation file
+	QString tmpfile = QString::fromStdString(projectfilepath)+ QUuid::createUuid().toString() + "_tmp.dyn";
 
     if(replace=="")
         return projectfilepath;
@@ -98,13 +100,13 @@ string replacestrings(string &replace, string projectfilepath)
 
     foreach(QString re, replacelist)
     {
-        QStringList r = re.split(",");
+		QStringList r = re.split("|");
         if(r.size() == 2)
         {
             QString target = r.at(1);
             QString source = r.at(0);
             content  = content.replace(source,target);
-            std::cout << "Replace in inputfile: " << source.toStdString() << " to " << target.toStdString();
+			std::cout << "Replace in inputfile: " << source.toStdString() << " to " << target.toStdString() << std::endl;
         }
     }
 
@@ -171,9 +173,9 @@ int main(int argc, char *argv[], char *envp[]) {
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
-		("help", "produce help message")
+		("help", "show help message")
 		("input-file", po::value<string>(), "set simulation file")
-        ("replace", po::value<string>(), "replace string in input file: ([STRING],[STRING];)*")
+		("replace", po::value<string>(), "replace string in input file: ([STRING]|[STRING];)*")
 		("repeat", po::value<int>(), "repeat simulation")
 		("cpfile", po::value<string>(), "Copy generated files: ([SOURCEFILE],[TARGETPATH]DMITERATION[FILENAME];)* ")
 		("verbose", "verbose output")
@@ -195,13 +197,11 @@ int main(int argc, char *argv[], char *envp[]) {
 	bool verbose = false;
 	string cpfile = "";
     string replace = "";
-	int numThreads = 1;
+	int numThreads = -1;
 
 	DM::LogLevel ll = DM::Standard;
+
 	try {
-
-
-
 		po::store(po::command_line_parser(argc, argv).
 			options(desc).positional(p).run(), vm);
 		po::notify(vm);
@@ -298,7 +298,8 @@ int main(int argc, char *argv[], char *envp[]) {
 	}
 
 #ifdef _OPENMP
-	omp_set_num_threads(numThreads);
+	if(numThreads > 0)
+		omp_set_num_threads(numThreads);
 #endif
 
 
